@@ -875,7 +875,7 @@ window.Chart = function(context){
 				ctx.lineWidth = config.datasetStrokeWidth;
 				ctx.beginPath();
 				ctx.moveTo(yAxisPosX, xAxisPosY - animPc*(calculateOffset(data.datasets[i].data[0],calculatedScale,scaleHop)))
-				datasetPoints[i] = []
+				datasetPoints[i] = [];
 
 				for (var j=1; j<data.datasets[i].data.length; j++){
 					if (config.bezierCurve){
