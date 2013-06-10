@@ -9,10 +9,10 @@
 
 //Define the global Chart Variable as a class.
 window.Chart = function(context){
-
 	var chart = this;
-	
-	
+
+	this.dataset = [];
+
 	//Easing functions adapted from Robert Penner's easing equations
 	//http://www.robertpenner.com/easing/
 	
@@ -150,7 +150,7 @@ window.Chart = function(context){
 	//Variables global to the chart
 	var width = context.canvas.width;
 	var height = context.canvas.height;
-
+	var position;
 
 	//High pixel density displays - multiply the size of the canvas height/width by the device pixel ratio, then scale.
 	if (window.devicePixelRatio) {
@@ -283,7 +283,6 @@ window.Chart = function(context){
 	};
 
 	this.Line = function(data,options){
-	
 		chart.Line.defaults = {
 			scaleOverlay : false,
 			scaleOverride : false,
@@ -551,6 +550,7 @@ window.Chart = function(context){
 					ctx.fillStyle = data.datasets[i].pointColor;
 					ctx.strokeStyle = data.datasets[i].pointStrokeColor;
 					ctx.lineWidth = config.pointDotStrokeWidth;
+
 					for (var k=0; k<data.datasets[i].data.length; k++){
 						ctx.rotate(rotationDegree);
 						ctx.beginPath();
@@ -787,7 +787,7 @@ window.Chart = function(context){
 	}
 
 	var Line = function(data,config,ctx){
-		var maxSize, scaleHop, calculatedScale, labelHeight, scaleHeight, valueBounds, labelTemplateString, valueHop,widestXLabel, xAxisLength,yAxisPosX,xAxisPosY, rotateLabels = 0;
+		var maxSize, scaleHop, calculatedScale, labelHeight, scaleHeight, valueBounds, labelTemplateString, valueHop,widestXLabel, xAxisLength,yAxisPosX,xAxisPosY, rotateLabels = 0, datasetPoints = [], hoveredPoint;
 			
 		calculateDrawingSizes();
 		
@@ -811,6 +811,65 @@ window.Chart = function(context){
 		scaleHop = Math.floor(scaleHeight/calculatedScale.steps);
 		calculateXAxisSize();
 		animationLoop(config,drawScale,drawLines,ctx);		
+
+		function activeDataPointHandler(event) {
+			var mouse_on_point = false;
+
+			for (var k in data.datasets) {
+				var dataset = data.datasets[k];
+				if (dataset.mouseover) {
+					for (var i in datasetPoints[k]) {
+						var point = datasetPoints[k][i];
+						var bounds = (config.pointDotStrokeWidth / 2) + point.radius;
+						if (
+							event.offsetX >= point.x - bounds && event.offsetY >= point.y - bounds &&
+							event.offsetX <= point.x + bounds && event.offsetY <= point.y + bounds
+						) {
+							mouse_on_point = true;
+							if (hoveredPoint != point) {
+								if (hoveredPoint) {
+									// We jumped from one point to the next, so fire the mouseout first for that dataset
+									data.datasets[hoveredPoint.datasetIndex].mouseout({event: event, point: point});
+								}
+								hoveredPoint = point;
+								dataset.mouseover({event: event, point: point});
+							}
+							break;
+						}
+					}
+				}
+			}
+
+			if (!mouse_on_point && hoveredPoint) {
+				if (data.datasets[hoveredPoint.datasetIndex].mouseout) {
+					data.datasets[hoveredPoint.datasetIndex].mouseout({event: event, point: point});
+				}
+				hoveredPoint = null;
+			}
+
+			if (mouse_on_point) {
+				context.canvas.style.cursor = 'pointer';
+			} else {
+				context.canvas.style.cursor = 'default';
+			}
+		}
+
+		if (window.Touch) {
+			context.canvas.ontouchstart = function(e) {
+				e.offsetX = e.targetTouches[0].clientX - position.x;
+				e.offsetY = e.targetTouches[0].clientY - position.y;
+				activeDataPointHandler(e);
+			}
+			context.canvas.ontouchmove = function(e) {
+				e.offsetX = e.targetTouches[0].clientX - position.x;
+				e.offsetY = e.targetTouches[0].clientY - position.y;
+				activeDataPointHandler(e);
+			}
+		} else {
+			context.canvas.onmousemove = function(e) {
+				activeDataPointHandler(e);
+			}
+		}
 		
 		function drawLines(animPc){
 			for (var i=0; i<data.datasets.length; i++){
@@ -818,6 +877,7 @@ window.Chart = function(context){
 				ctx.lineWidth = config.datasetStrokeWidth;
 				ctx.beginPath();
 				ctx.moveTo(yAxisPosX, xAxisPosY - animPc*(calculateOffset(data.datasets[i].data[0],calculatedScale,scaleHop)))
+				datasetPoints[i] = []
 
 				for (var j=1; j<data.datasets[i].data.length; j++){
 					if (config.bezierCurve){
@@ -838,13 +898,25 @@ window.Chart = function(context){
 				else{
 					ctx.closePath();
 				}
+
 				if(config.pointDot){
 					ctx.fillStyle = data.datasets[i].pointColor;
 					ctx.strokeStyle = data.datasets[i].pointStrokeColor;
 					ctx.lineWidth = config.pointDotStrokeWidth;
+
 					for (var k=0; k<data.datasets[i].data.length; k++){
+						var point = {
+							x: yAxisPosX + (valueHop * k),
+							y: xAxisPosY - animPc * (calculateOffset(data.datasets[i].data[k], calculatedScale, scaleHop)),
+							radius: config.pointDotRadius,
+							start: 0,
+							end: Math.PI * 2,
+							datasetIndex: i,
+							dataPointIndex: k
+						};
+						datasetPoints[i].push(point);
 						ctx.beginPath();
-						ctx.arc(yAxisPosX + (valueHop *k),xAxisPosY - animPc*(calculateOffset(data.datasets[i].data[k],calculatedScale,scaleHop)),config.pointDotRadius,0,Math.PI*2,true);
+						ctx.arc(point.x, point.y, point.radius, point.start, point.end, true);
 						ctx.fill();
 						ctx.stroke();
 					}
@@ -1011,11 +1083,7 @@ window.Chart = function(context){
 				maxSteps : maxSteps,
 				minSteps : minSteps
 			};
-			
-	
-		}
-
-		
+		}	
 	}
 	
 	var Bar = function(data,config,ctx){
@@ -1258,6 +1326,8 @@ window.Chart = function(context){
 					requestAnimFrame(animLoop);
 				}
 				else{
+					// Get the final position of the canvas
+					position = getPosition(context.canvas);
 					if (typeof config.onAnimationComplete == "function") config.onAnimationComplete();
 				}
 			
@@ -1388,6 +1458,25 @@ window.Chart = function(context){
 	    for (var attrname in userDefined) { returnObj[attrname] = userDefined[attrname]; }
 	    return returnObj;
 	}
+
+	function getPosition(e) {
+		var xPosition = 0;
+		var yPosition = 0;
+
+		while(e) {
+			xPosition += (e.offsetLeft + e.clientLeft);
+			yPosition += (e.offsetTop + e.clientTop);
+			e = e.offsetParent;
+		}
+		if(window.pageXOffset > 0 || window.pageYOffset > 0) {
+			xPosition -= window.pageXOffset;
+			yPosition -= window.pageYOffset;
+		} else if(document.body.scrollLeft > 0 || document.body.scrollTop > 0) {
+			xPosition -= document.body.scrollLeft;
+			yPosition -= document.body.scrollTop;
+		}
+		return { x: xPosition, y: yPosition };
+	}
 	
 	//Javascript micro templating by John Resig - source at http://ejohn.org/blog/javascript-micro-templating/
 	  var cache = {};
@@ -1422,5 +1511,3 @@ window.Chart = function(context){
 	    return data ? fn( data ) : fn;
 	  };
 }
-
-
