@@ -3,7 +3,7 @@ Chart.js
 *Simple HTML5 Charts using the canvas element* [chartjs.org](http://www.chartjs.org)
 
 ## Changes
-This adds a mouseover and mouseout event to the data points in a line graph (events for all graphs may follow shortly). I implemented because I needed to implement tooltips for the data points, but you can use the event to do whatever you like.
+This adds a mouseover and mouseout event to the data points in a line graph (events for all graphs may follow shortly). I implemented it because I needed to add tooltips for the data points, but you can use the event to do whatever you like.
 
 To hook into the events, just specify a mouseover and mouseout event handler for your dataset. This works for browser mouse events as well as mobile touch events.
 ```javascript
