@@ -11,8 +11,6 @@
 window.Chart = function(context){
 	var chart = this;
 
-	this.dataset = [];
-
 	//Easing functions adapted from Robert Penner's easing equations
 	//http://www.robertpenner.com/easing/
 	
