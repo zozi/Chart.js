@@ -875,7 +875,7 @@ window.Chart = function(context){
         ctx.lineWidth = config.datasetStrokeWidth;
         ctx.beginPath();
 
-        var yDataPoint = (data.datasets[i].data[0] !== undefined) ? data.datasets[i].data[0][data.yDataProp] : 0;
+        var yDataPoint = (data.datasets[i].data[0] !== undefined) ? parseInt(data.datasets[i].data[0][data.yDataProp], 10) : 0;
         ctx.moveTo(yAxisPosX, xAxisPosY - animPc*(calculateOffset(yDataPoint,calculatedScale,scaleHop)))
         datasetPoints[i] = [];
 
@@ -908,7 +908,7 @@ window.Chart = function(context){
             if(data.datasets[i].data[k] !== undefined){
               var point = {
                 x: yAxisPosX + (valueHop * k),
-                y: xAxisPosY - animPc * (calculateOffset(data.datasets[i].data[k][data.yDataProp], calculatedScale, scaleHop)),
+                y: xAxisPosY - animPc * (calculateOffset(parseInt(data.datasets[i].data[k][data.yDataProp], 10), calculatedScale, scaleHop)),
                 radius: config.pointDotRadius,
                 start: 0,
                 end: Math.PI * 2,
@@ -927,7 +927,7 @@ window.Chart = function(context){
       
       function yPos(dataSet,iteration){
         var dataPoint = data.datasets[dataSet].data[iteration];
-        var yVal =  dataPoint ? dataPoint[data.yDataProp] : 0;
+        var yVal =  dataPoint ? parseInt(dataPoint[data.yDataProp], 10) : 0;
         return xAxisPosY - animPc*(calculateOffset(yVal,calculatedScale,scaleHop));     
       }
       function xPos(iteration){
@@ -1058,8 +1058,9 @@ window.Chart = function(context){
       for (var i=0; i<data.datasets.length; i++){
         for (var j=0; j<data.datasets[i].data.length; j++){
           if(data.datasets[i].data[j] !== undefined){
-            if ( data.datasets[i].data[j][data.yDataProp] > upperValue) { upperValue = data.datasets[i].data[j][data.yDataProp] };
-            if ( data.datasets[i].data[j][data.yDataProp] < lowerValue) { lowerValue = data.datasets[i].data[j][data.yDataProp] };
+            var dataValue = parseInt(data.datasets[i].data[j][data.yDataProp],10);
+            if ( dataValue > upperValue) { upperValue = dataValue };
+            if ( dataValue < lowerValue) { lowerValue = dataValue };
           }          
         }
       };
